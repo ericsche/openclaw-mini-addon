@@ -51,8 +51,9 @@ trailing slash. These are always allowed without configuration:
 `http://127.0.0.1:<port>`, `http://localhost:<port>`, `http://homeassistant:<port>`
 and `http://homeassistant.local:<port>`.
 
-> The add-on owns `gateway.controlUi.allowedOrigins` and rewrites it on every start.
-> Add origins here, not with `openclaw config set`, or they will be lost on restart.
+> The add-on **preserves everything else** in `openclaw.json`. Origins you add by
+> hand or from the Control UI are merged, not replaced, so they survive a restart.
+> To remove one, edit `openclaw.json` directly.
 
 ### `enable_terminal`
 
@@ -164,6 +165,27 @@ Everything under `/config` survives add-on updates and rebuilds:
 
 `.node_global`, `.npm` and `.cache` are excluded from Home Assistant backups because
 they are regenerable.
+
+### What the add-on writes to `openclaw.json`
+
+Your configuration is **merged, never overwritten**. Agents, channels, models,
+credentials and sessions are left completely alone.
+
+| Key | Behaviour |
+|---|---|
+| `gateway.mode` | Forced to `local` — the gateway refuses to start otherwise |
+| `gateway.port` | Forced to the `gateway_port` option, which must match the mapped port |
+| `gateway.bind` | Forced to the `gateway_bind_mode` option |
+| `gateway.auth.token` | Written only when missing, or when you set the option. An existing token is reused |
+| `gateway.controlUi.allowedOrigins` | **Merged**, never replaced. Manual entries survive |
+
+Everything else, including other `gateway.controlUi` keys such as `basePath`, is
+preserved untouched.
+
+The file is only rewritten when the result actually differs. When it is, the previous
+version is kept as `openclaw.json.addon.bak`. On an unchanged boot the add-on logs
+`Config already correct; left untouched` and does not touch the file at all, so the
+gateway does not hot-reload for nothing.
 
 ## Troubleshooting
 

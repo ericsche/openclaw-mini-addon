@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+
+- Stop replacing `gateway.controlUi.allowedOrigins` on every start. Origins added
+  by hand or from the Control UI are now merged in and survive restarts.
+- Leave `openclaw.json` completely untouched when the merged result is identical,
+  instead of rewriting it on every boot and triggering a pointless hot reload.
+- Keep the previous version as `openclaw.json.addon.bak` whenever a write does
+  happen.
+
 ## 0.2.0
 
 - Add a web terminal on the Home Assistant sidebar, served through Ingress with

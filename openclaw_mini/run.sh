@@ -88,9 +88,22 @@ jq \
     | (if $token == "" then .
        else .auth = ((.auth // {}) | .mode = "token" | .token = $token)
        end)
-    | .controlUi = ((.controlUi // {}) | .allowedOrigins = $allowed))
+    | .controlUi = ((.controlUi // {})
+        # Union, never replace: origins added by hand or from the Control UI
+        # must survive a restart. Removing one means editing openclaw.json.
+        | .allowedOrigins = (((.allowedOrigins // []) + $allowed) | unique)))
 ' "$OC_CONFIG" > "$CONFIG_TMP"
-mv "$CONFIG_TMP" "$OC_CONFIG"
+
+# Only touch the file when something actually changes: the gateway watches it
+# and hot-reloads, and an untouched config cannot be clobbered by a bad write.
+if [ "$(cat "$CONFIG_TMP")" = "$(cat "$OC_CONFIG")" ]; then
+  rm -f "$CONFIG_TMP"
+  log "Config already correct; left untouched"
+else
+  cp "$OC_CONFIG" "$OC_CONFIG.addon.bak" 2>/dev/null || true
+  mv "$CONFIG_TMP" "$OC_CONFIG"
+  log "Config updated; previous version kept as openclaw.json.addon.bak"
+fi
 
 log "OpenClaw $(openclaw --version 2>/dev/null || echo unknown) | port=$GW_PORT bind=$GW_BIND"
 log "Operator commands: oc-maint status|stop|start|restart|doctor|update|token"

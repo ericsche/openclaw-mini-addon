@@ -113,9 +113,13 @@ docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
 - **Restart backoff** is 5s per consecutive failure, capped at 60s.
 - **`/config` holds everything persistent**: `.openclaw` (state), `clawd` (workspace),
   `.node_global` (npm globals, so updates survive an add-on rebuild).
-- **The add-on config write is a merge**, never an overwrite: only `gateway.mode`,
-  `port`, `bind`, `auth` and `controlUi.allowedOrigins` are touched. Everything else
-  you set in `openclaw.json` is preserved.
+- **The add-on config write is a merge**, never an overwrite. It enforces only
+  `gateway.mode`, `port` and `bind`, writes `auth.token` only when one is missing,
+  and **unions** `controlUi.allowedOrigins` so manual entries survive. Agents,
+  channels, models and credentials are never touched.
+- **The file is left alone when nothing changes.** The gateway watches it and hot
+  reloads, so a pointless rewrite on every boot would be a real cost. When a write
+  does happen, the previous version is kept as `openclaw.json.addon.bak`.
 
 ## Layout
 
