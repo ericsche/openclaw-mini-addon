@@ -1,10 +1,13 @@
-ARG BUILD_FROM=node:24-bookworm-slim
-FROM ${BUILD_FROM}
+# Pinned explicitly, NOT via ARG BUILD_FROM.
+# The Supervisor passes BUILD_FROM pointing at a Home Assistant Alpine base
+# image, which would override any default we set here and break the build:
+# Alpine has no apt-get. OpenClaw needs Node 24, so we start from it directly.
+FROM node:24-bookworm-slim
 
 # Supplied by the Supervisor from config.yaml. Locally built add-ons must carry
 # the io.hass.* labels themselves; the Home Assistant builder action would
 # otherwise inject them.
-ARG BUILD_VERSION=0.1.0
+ARG BUILD_VERSION=0.1.1
 ARG BUILD_ARCH=amd64
 
 ENV DEBIAN_FRONTEND=noninteractive \

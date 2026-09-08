@@ -1,6 +1,0 @@
-build_from:
-  amd64: node:24-bookworm-slim
-
-labels:
-  org.opencontainers.image.title: OpenClaw Mini
-  org.opencontainers.image.source: https://github.com/ericsche/openclaw-mini-addon

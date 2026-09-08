@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- Fix the build failing with `apt-get: not found`. The Supervisor overrides
+  `ARG BUILD_FROM` with a Home Assistant Alpine base image, so the Dockerfile
+  now pins `FROM node:24-bookworm-slim` explicitly and no longer relies on
+  `BUILD_FROM`. `build.yaml` was removed for the same reason.
+
 ## 0.1.0
 
 Initial release.

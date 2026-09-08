@@ -80,6 +80,11 @@ oc-maint token      # print the gateway auth token
 
 ## Design notes
 
+- **The base image is pinned, not taken from `BUILD_FROM`.** The Supervisor passes
+  `BUILD_FROM` pointing at a Home Assistant Alpine base image, which silently
+  overrides any default declared in the Dockerfile and breaks the build
+  (`apt-get: not found`). OpenClaw needs Node 24, so the Dockerfile starts from
+  `node:24-bookworm-slim` directly and ignores `BUILD_FROM` entirely.
 - **Health is measured by the listening socket, not by a PID.** `openclaw gateway run`
   is a wrapper that may fork the real daemon, so the child PID is unreliable.
   Polling the port sidesteps the whole problem.
@@ -98,11 +103,12 @@ oc-maint token      # print the gateway auth token
 repository.yaml
 openclaw_mini/
   config.yaml       add-on manifest (options, schema, ports, mappings)
-  build.yaml        base image
   Dockerfile        node 24 + openclaw + a handful of CLI tools
   run.sh            entrypoint: options -> config -> supervisor loop
   oc-maint          operator CLI (maintenance mode lives here)
   oc-common.sh      shared helpers
+  translations/     option labels shown in the Home Assistant UI
+  CHANGELOG.md
   DOCS.md           add-on documentation tab
 tests/
   test-supervisor.sh     boot, recovery, maintenance, shutdown

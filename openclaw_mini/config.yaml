@@ -1,5 +1,5 @@
 name: OpenClaw Mini
-version: "0.1.0"
+version: "0.1.1"
 slug: openclaw_mini
 description: Minimal add-on running the OpenClaw gateway, with a real maintenance mode.
 url: https://github.com/ericsche/openclaw-mini-addon
