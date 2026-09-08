@@ -20,6 +20,7 @@ TIMEZONE="$(opt '.timezone')";              TIMEZONE="${TIMEZONE:-Europe/Paris}"
 GW_PORT="$(opt '.gateway_port')";           GW_PORT="${GW_PORT:-18789}"
 GW_BIND="$(opt '.gateway_bind_mode')";      GW_BIND="${GW_BIND:-lan}"
 GW_TOKEN="$(opt '.gateway_token')"
+ALLOWED_ORIGINS="$(opt '.allowed_origins')"
 AUTO_UPDATE="$(opt '.auto_update')";        AUTO_UPDATE="${AUTO_UPDATE:-false}"
 
 if [ -f "/usr/share/zoneinfo/$TIMEZONE" ]; then
@@ -64,14 +65,26 @@ CONFIG_TMP="$(mktemp)"
 jq \
   --argjson port "$GW_PORT" \
   --arg bind "$GW_BIND" \
-  --arg token "$GW_TOKEN" '
-  .gateway = ((.gateway // {})
+  --arg token "$GW_TOKEN" \
+  --arg origins "$ALLOWED_ORIGINS" '
+  def trim: sub("^\\s+"; "") | sub("\\s+$"; "");
+
+  ($port | tostring) as $p
+  | ($origins | split(",") | map(trim) | map(select(length > 0))) as $extra
+  # The Control UI rejects any browser origin that is not listed here, which is
+  # what produces "origin not allowed" when reaching the dashboard by IP.
+  | ([ "http://127.0.0.1:" + $p,
+       "http://localhost:" + $p,
+       "http://homeassistant.local:" + $p,
+       "http://homeassistant:" + $p ] + $extra | unique) as $allowed
+  | .gateway = ((.gateway // {})
     | .mode = "local"
     | .port = $port
     | .bind = $bind
-    | if $token == "" then .
-      else .auth = ((.auth // {}) | .mode = "token" | .token = $token)
-      end)
+    | (if $token == "" then .
+       else .auth = ((.auth // {}) | .mode = "token" | .token = $token)
+       end)
+    | .controlUi = ((.controlUi // {}) | .allowedOrigins = $allowed))
 ' "$OC_CONFIG" > "$CONFIG_TMP"
 mv "$CONFIG_TMP" "$OC_CONFIG"
 

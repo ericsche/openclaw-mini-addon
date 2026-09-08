@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2
+
+- Add the `allowed_origins` option. Without it the Control UI answers
+  `origin not allowed` whenever the dashboard is opened by IP or hostname,
+  because OpenClaw only trusts origins listed in
+  `gateway.controlUi.allowedOrigins`.
+- Loopback, `homeassistant` and `homeassistant.local` origins are now always
+  allowed.
+
 ## 0.1.1
 
 - Fix the build failing with `apt-get: not found`. The Supervisor overrides

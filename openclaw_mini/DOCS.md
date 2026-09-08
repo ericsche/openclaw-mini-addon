@@ -32,6 +32,28 @@ Port for the gateway WebSocket and the dashboard. Also the host port. Default `1
 Shared auth token. Leave empty to have one generated on first start and stored in
 `/config/.openclaw/openclaw.json`.
 
+### `allowed_origins`
+
+Comma-separated list of browser origins allowed to open the Control UI, for example:
+
+```
+http://192.168.1.50:18789
+```
+
+OpenClaw rejects any origin that is not listed, with:
+
+```
+origin not allowed (open the Control UI from the gateway host or allow it in gateway.controlUi.allowedOrigins)
+```
+
+Use the exact scheme, host and port shown in your browser's address bar, with no
+trailing slash. These are always allowed without configuration:
+`http://127.0.0.1:<port>`, `http://localhost:<port>`, `http://homeassistant:<port>`
+and `http://homeassistant.local:<port>`.
+
+> The add-on owns `gateway.controlUi.allowedOrigins` and rewrites it on every start.
+> Add origins here, not with `openclaw config set`, or they will be lost on restart.
+
 ### `auto_update`
 
 When `true`, `openclaw@latest` is installed on every start, before the gateway boots.
@@ -92,6 +114,10 @@ A previous `oc-maint stop` was never resumed. Run `oc-maint start`.
 
 **Cannot reach the dashboard from another machine.**
 Check that `gateway_bind_mode` is `lan`, not `loopback`, then restart the add-on.
+
+**"origin not allowed" when opening the dashboard.**
+Add the URL you use to the `allowed_origins` option, scheme and port included, for
+example `http://192.168.1.50:18789`, then restart the add-on.
 
 **Connection refused right after starting.**
 The gateway can take 20-30 seconds to initialise. The supervisor waits up to 90

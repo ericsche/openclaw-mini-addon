@@ -47,6 +47,7 @@ The dashboard is at `http://<home-assistant-ip>:18789/`.
 | `gateway_port` | `18789` | Gateway WebSocket + dashboard port |
 | `gateway_bind_mode` | `lan` | `lan` to reach it from your network, `loopback` for local only |
 | `gateway_token` | *(empty)* | Auth token. Generated automatically if empty and bind is `lan` |
+| `allowed_origins` | *(empty)* | Comma-separated browser origins allowed to open the Control UI, e.g. `http://192.168.1.50:18789` |
 | `auto_update` | `false` | Install `openclaw@latest` on every start, before the gateway boots |
 
 > With `gateway_bind_mode: loopback` the mapped port is unreachable from your LAN.
@@ -94,8 +95,8 @@ oc-maint token      # print the gateway auth token
 - **`/config` holds everything persistent**: `.openclaw` (state), `clawd` (workspace),
   `.node_global` (npm globals, so updates survive an add-on rebuild).
 - **The add-on config write is a merge**, never an overwrite: only `gateway.mode`,
-  `port`, `bind` and `auth` are touched. Everything else you set in
-  `openclaw.json` is preserved.
+  `port`, `bind`, `auth` and `controlUi.allowedOrigins` are touched. Everything else
+  you set in `openclaw.json` is preserved.
 
 ## Layout
 

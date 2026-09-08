@@ -18,6 +18,13 @@ configuration:
     description: >-
       Shared token required to connect. Leave empty to have one generated on
       first start; retrieve it afterwards with "oc-maint token".
+  allowed_origins:
+    name: Additional allowed origins
+    description: >-
+      Comma-separated browser origins allowed to open the Control UI, for
+      example http://192.168.1.50:18789. Required when you reach the dashboard
+      by IP or hostname, otherwise OpenClaw answers "origin not allowed".
+      Loopback and homeassistant.local are always allowed.
   auto_update:
     name: Update OpenClaw on every start
     description: >-
