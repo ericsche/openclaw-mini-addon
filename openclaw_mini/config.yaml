@@ -1,0 +1,48 @@
+name: OpenClaw Mini
+version: "0.1.0"
+slug: openclaw_mini
+description: Minimal add-on running the OpenClaw gateway, with a real maintenance mode.
+url: https://github.com/ericsche/openclaw-mini-addon
+arch:
+  - amd64
+
+startup: services
+boot: auto
+
+# No s6-overlay here, so we keep Docker's default init (tini) as PID 1:
+# it reaps orphaned gateway processes and forwards SIGTERM to run.sh.
+# `init: false` is only required for s6-overlay based images.
+
+# Bridged network + explicit port mapping. Simpler and safer than host_network.
+host_network: false
+webui: "http://[HOST]:[PORT:18789]/"
+ports:
+  18789/tcp: 18789
+ports_description:
+  18789/tcp: OpenClaw gateway (WebSocket) and dashboard
+
+# /config inside the container -> /addon_configs/<slug> on the host.
+# Everything that must survive an add-on rebuild lives here.
+map:
+  - addon_config:rw
+  - share:rw
+
+# Regenerable, keeps Home Assistant backups small.
+backup_exclude:
+  - ".node_global"
+  - ".npm"
+  - ".cache"
+
+options:
+  timezone: Europe/Paris
+  gateway_port: 18789
+  gateway_bind_mode: lan
+  gateway_token: ""
+  auto_update: false
+
+schema:
+  timezone: str
+  gateway_port: int(1024,65535)
+  gateway_bind_mode: list(loopback|lan)
+  gateway_token: password?
+  auto_update: bool?

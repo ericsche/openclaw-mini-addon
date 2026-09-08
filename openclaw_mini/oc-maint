@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# Operator CLI for the OpenClaw Mini add-on.
+#
+# Why this exists: `openclaw doctor --fix` and `openclaw update` need the
+# gateway to be stopped, but a supervised container restarts it immediately.
+# These commands pause the supervisor, do the work, then resume it.
+set -euo pipefail
+
+# shellcheck source=oc-common.sh
+. /usr/local/lib/oc-common.sh
+oc_export_env
+
+PORT="$(oc_port)"
+
+pause_gateway() {
+  touch "$OC_MAINT_FLAG"
+  local pid i
+  pid="$(oc_gateway_pid "$PORT" || true)"
+  if [ -n "$pid" ]; then
+    echo "Stopping gateway (PID $pid)..."
+    kill "$pid" 2>/dev/null || true
+  fi
+  for i in $(seq 1 30); do
+    if ! oc_listening "$PORT"; then
+      echo "Gateway stopped; supervisor paused."
+      return 0
+    fi
+    sleep 1
+  done
+  echo "ERROR: gateway is still listening on :$PORT after 30s." >&2
+  return 1
+}
+
+resume_gateway() {
+  rm -f "$OC_MAINT_FLAG"
+  echo "Supervisor resumed; waiting for the gateway..."
+  local i
+  for i in $(seq 1 90); do
+    if oc_listening "$PORT"; then
+      echo "Gateway is listening on :$PORT."
+      return 0
+    fi
+    sleep 1
+  done
+  echo "WARN: gateway not listening yet. Check the add-on log." >&2
+  return 1
+}
+
+# Never leave the add-on stuck in maintenance because of Ctrl+C.
+guard_resume() {
+  trap 'echo; echo "Interrupted; resuming supervisor."; resume_gateway || true; exit 130' INT TERM
+}
+
+cmd_status() {
+  local pid
+  pid="$(oc_gateway_pid "$PORT" || true)"
+  echo "OpenClaw Mini status"
+  echo "  CLI version   : $(openclaw --version 2>/dev/null || echo unknown)"
+  echo "  Config        : $OC_CONFIG"
+  echo "  Workspace     : $OC_WORKSPACE"
+  echo "  Port          : $PORT"
+  echo "  Bind          : $(jq -r '.gateway.bind // "unset"' "$OC_CONFIG" 2>/dev/null || echo unknown)"
+  if oc_listening "$PORT"; then
+    echo "  Listener      : active"
+  else
+    echo "  Listener      : DOWN"
+  fi
+  echo "  Gateway PID   : ${pid:-none}"
+  if [ -f "$OC_MAINT_FLAG" ]; then
+    echo "  Maintenance   : ON (supervisor paused, run 'oc-maint start')"
+  else
+    echo "  Maintenance   : off"
+  fi
+}
+
+cmd_stop() {
+  pause_gateway
+  echo "Run 'oc-maint start' when you are done."
+}
+
+cmd_start() {
+  resume_gateway
+}
+
+cmd_restart() {
+  pause_gateway
+  resume_gateway
+}
+
+cmd_doctor() {
+  guard_resume
+  pause_gateway
+  local rc=0
+  # --non-interactive + --yes: there is no TTY guarantee here, and without them
+  # doctor only prints advisories instead of applying migrations.
+  openclaw doctor --fix --non-interactive --yes || rc=$?
+  resume_gateway || true
+  if [ "$rc" -ne 0 ]; then
+    echo "doctor exited with code $rc" >&2
+  fi
+  return "$rc"
+}
+
+cmd_update() {
+  guard_resume
+  pause_gateway
+  local rc=0
+  # Deliberately npm, not `openclaw update`: the latter drives service
+  # management and a post-update doctor that cannot work inside this container.
+  npm install -g openclaw@latest || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    openclaw doctor --fix --non-interactive --yes || rc=$?
+  fi
+  resume_gateway || true
+  echo "Version now: $(openclaw --version 2>/dev/null || echo unknown)"
+  return "$rc"
+}
+
+cmd_token() {
+  jq -r '.gateway.auth.token // "(no token configured)"' "$OC_CONFIG"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: oc-maint <command>
+
+  status    Show gateway, port, PID and maintenance state
+  stop      Pause the supervisor and stop the gateway
+  start     Resume the supervisor and wait for the gateway
+  restart   stop + start
+  doctor    Stop the gateway, run 'openclaw doctor --fix', restart it
+  update    Stop the gateway, install openclaw@latest, repair, restart it
+  token     Print the configured gateway auth token
+EOF
+}
+
+case "${1:-status}" in
+  status)  cmd_status ;;
+  stop)    cmd_stop ;;
+  start)   cmd_start ;;
+  restart) cmd_restart ;;
+  doctor)  cmd_doctor ;;
+  update)  cmd_update ;;
+  token)   cmd_token ;;
+  -h|--help|help) usage ;;
+  *) echo "Unknown command: $1" >&2; usage >&2; exit 2 ;;
+esac

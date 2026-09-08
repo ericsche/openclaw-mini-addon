@@ -1,0 +1,50 @@
+ARG BUILD_FROM=node:24-bookworm-slim
+FROM ${BUILD_FROM}
+
+# Supplied by the Supervisor from config.yaml. Locally built add-ons must carry
+# the io.hass.* labels themselves; the Home Assistant builder action would
+# otherwise inject them.
+ARG BUILD_VERSION=0.1.0
+ARG BUILD_ARCH=amd64
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false
+
+# iproute2 -> ss (port ownership), procps -> pgrep/kill, jq -> options parsing.
+# git/ripgrep/curl are the bare minimum most OpenClaw skills expect.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      git \
+      jq \
+      iproute2 \
+      procps \
+      ripgrep \
+      tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+# Baked-in runtime so the first boot is fast and works offline.
+# A later `oc-maint update` installs into /config/.node_global, which wins in PATH.
+RUN npm install -g openclaw@latest \
+ && npm cache clean --force
+
+COPY oc-common.sh /usr/local/lib/oc-common.sh
+COPY run.sh /usr/local/bin/run.sh
+COPY oc-maint /usr/local/bin/oc-maint
+RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/oc-maint
+
+WORKDIR /config
+CMD ["/usr/local/bin/run.sh"]
+
+LABEL \
+  io.hass.name="OpenClaw Mini" \
+  io.hass.description="Minimal OpenClaw gateway add-on with a working maintenance mode" \
+  io.hass.type="addon" \
+  io.hass.version="${BUILD_VERSION}" \
+  io.hass.arch="${BUILD_ARCH}" \
+  org.opencontainers.image.title="OpenClaw Mini" \
+  org.opencontainers.image.source="https://github.com/ericsche/openclaw-mini-addon" \
+  org.opencontainers.image.licenses="MIT"

@@ -1,0 +1,29 @@
+configuration:
+  timezone:
+    name: Timezone
+    description: >-
+      Timezone used inside the container, for example Europe/Paris.
+  gateway_port:
+    name: Gateway port
+    description: >-
+      Port used by the OpenClaw gateway for both the WebSocket API and the
+      dashboard. This is also the port exposed on your network.
+  gateway_bind_mode:
+    name: Bind mode
+    description: >-
+      Use "lan" to reach the dashboard from your network. "loopback" restricts
+      the gateway to the container itself, which makes the exposed port unusable.
+  gateway_token:
+    name: Gateway auth token
+    description: >-
+      Shared token required to connect. Leave empty to have one generated on
+      first start; retrieve it afterwards with "oc-maint token".
+  auto_update:
+    name: Update OpenClaw on every start
+    description: >-
+      Install openclaw@latest each time the add-on starts, before the gateway
+      boots. This is the only moment when nothing holds the state lock. Leave
+      this off if you prefer updating deliberately with "oc-maint update".
+
+network:
+  18789/tcp: OpenClaw gateway (WebSocket API and dashboard)
