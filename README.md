@@ -48,6 +48,7 @@ The dashboard is at `http://<home-assistant-ip>:18789/`.
 | `gateway_bind_mode` | `lan` | `lan` to reach it from your network, `loopback` for local only |
 | `gateway_token` | *(empty)* | Auth token. Generated automatically if empty and bind is `lan` |
 | `allowed_origins` | *(empty)* | Comma-separated browser origins allowed to open the Control UI, e.g. `http://192.168.1.50:18789` |
+| `auto_approve_devices` | `false` | Approve Control UI browser pairing automatically. Needed when you have no Docker access to run `oc-maint approve` |
 | `auto_update` | `false` | Install `openclaw@latest` on every start, before the gateway boots |
 
 > With `gateway_bind_mode: loopback` the mapped port is unreachable from your LAN.

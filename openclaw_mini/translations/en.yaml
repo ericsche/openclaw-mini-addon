@@ -25,6 +25,13 @@ configuration:
       example http://192.168.1.50:18789. Required when you reach the dashboard
       by IP or hostname, otherwise OpenClaw answers "origin not allowed".
       Loopback and homeassistant.local are always allowed.
+  auto_approve_devices:
+    name: Auto-approve Control UI browsers
+    description: >-
+      Approve browser pairing requests automatically instead of running
+      "oc-maint approve" by hand. Convenient when you have no shell into this
+      container, but it means any browser that can reach the port and knows the
+      token gets operator access. Only enable this on a trusted network.
   auto_update:
     name: Update OpenClaw on every start
     description: >-

@@ -54,6 +54,21 @@ and `http://homeassistant.local:<port>`.
 > The add-on owns `gateway.controlUi.allowedOrigins` and rewrites it on every start.
 > Add origins here, not with `openclaw config set`, or they will be lost on restart.
 
+### `auto_approve_devices`
+
+Approves Control UI browser pairing requests automatically, so you never need a shell.
+
+**Why this exists:** Home Assistant's official *Terminal & SSH* add-on has no Docker
+access, so it cannot `docker exec` into this container. On such a setup there is no
+other way to run `oc-maint approve`, and the dashboard stays unreachable.
+
+⚠️ **Security:** with this on, any browser that reaches the port and presents the
+gateway token is granted operator access without confirmation. Only enable it on a
+trusted network. Leave it off if you can reach a shell.
+
+Approved request IDs are remembered for the lifetime of the container, so repeated
+upgrade requests are not resubmitted in a loop.
+
 ### `auto_update`
 
 When `true`, `openclaw@latest` is installed on every start, before the gateway boots.
@@ -69,12 +84,16 @@ behind your back.
 
 ### Getting a shell
 
-This add-on ships no web terminal. Use the **Advanced SSH & Web Terminal** add-on with
+This add-on ships no web terminal. You need Docker access, which the **official
+Terminal & SSH add-on does not provide**. Use **Advanced SSH & Web Terminal** with
 protection mode disabled, or the host console, then:
 
 ```bash
 docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
 ```
+
+If you cannot get Docker access at all, enable the `auto_approve_devices` option so
+the add-on approves Control UI browsers on its own.
 
 The container sets `HOME=/config` and puts `/config/.node_global/bin` on `PATH`, so
 `openclaw` and `oc-maint` target the live state without extra environment variables.

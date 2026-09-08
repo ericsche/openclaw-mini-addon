@@ -1,5 +1,5 @@
 name: OpenClaw Mini
-version: "0.1.3"
+version: "0.1.4"
 slug: openclaw_mini
 description: Minimal add-on running the OpenClaw gateway, with a real maintenance mode.
 url: https://github.com/ericsche/openclaw-mini-addon
@@ -39,6 +39,7 @@ options:
   gateway_bind_mode: lan
   gateway_token: ""
   allowed_origins: ""
+  auto_approve_devices: false
   auto_update: false
 
 schema:
@@ -47,4 +48,5 @@ schema:
   gateway_bind_mode: list(loopback|lan)
   gateway_token: password?
   allowed_origins: str?
+  auto_approve_devices: bool?
   auto_update: bool?

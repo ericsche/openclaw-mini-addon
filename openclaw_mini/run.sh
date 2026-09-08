@@ -21,6 +21,7 @@ GW_PORT="$(opt '.gateway_port')";           GW_PORT="${GW_PORT:-18789}"
 GW_BIND="$(opt '.gateway_bind_mode')";      GW_BIND="${GW_BIND:-lan}"
 GW_TOKEN="$(opt '.gateway_token')"
 ALLOWED_ORIGINS="$(opt '.allowed_origins')"
+AUTO_APPROVE="$(opt '.auto_approve_devices')"; AUTO_APPROVE="${AUTO_APPROVE:-false}"
 AUTO_UPDATE="$(opt '.auto_update')";        AUTO_UPDATE="${AUTO_UPDATE:-false}"
 
 if [ -f "/usr/share/zoneinfo/$TIMEZONE" ]; then
@@ -166,6 +167,48 @@ reap_wrapper() {
   fi
 }
 
+# Control UI browsers reaching the gateway from anything but loopback must be
+# paired once, and OpenClaw offers no config switch for it. Without a shell in
+# this container there would be no way to approve them, so this opt-in loop does
+# it. Approved ids are remembered to avoid re-requesting upgrades in a loop.
+APPROVED_LOG=/tmp/openclaw-approved-devices
+LAST_APPROVE_CHECK=-15   # negative so the first pass runs immediately
+
+approve_pending_devices() {
+  local now out ids id
+  now="$SECONDS"
+  if [ $(( now - LAST_APPROVE_CHECK )) -lt 15 ]; then
+    return 0
+  fi
+  LAST_APPROVE_CHECK="$now"
+
+  out="$(openclaw devices list --json 2>/dev/null || true)"
+  if [ -z "$out" ]; then
+    return 0
+  fi
+
+  # Schema-agnostic: collect every requestId anywhere in the payload that is not
+  # already marked approved, rather than assuming a fixed response shape.
+  ids="$(printf '%s' "$out" | jq -r '
+      [ .. | objects
+        | select((.requestId? // "") != "")
+        | select((((.status? // .state? // "pending") | tostring) | ascii_downcase) != "approved")
+        | .requestId ]
+      | unique | .[]' 2>/dev/null || true)"
+
+  touch "$APPROVED_LOG"
+  for id in $ids; do
+    if grep -qxF "$id" "$APPROVED_LOG" 2>/dev/null; then
+      continue
+    fi
+    echo "$id" >> "$APPROVED_LOG"
+    log "auto-approving device pairing request $id"
+    if ! openclaw devices approve "$id" >/dev/null 2>&1; then
+      log "WARN: could not approve $id"
+    fi
+  done
+}
+
 FAIL_STREAK=0
 
 while true; do
@@ -179,6 +222,9 @@ while true; do
 
   if oc_listening "$GW_PORT"; then
     FAIL_STREAK=0
+    if [ "$AUTO_APPROVE" = "true" ]; then
+      approve_pending_devices
+    fi
     nap 5
     continue
   fi

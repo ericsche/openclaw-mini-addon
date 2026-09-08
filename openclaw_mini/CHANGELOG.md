@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- Add the opt-in `auto_approve_devices` option. Home Assistant's official
+  Terminal & SSH add-on has no Docker access, so on such a setup there was no
+  way at all to reach `oc-maint` and approve a Control UI browser. The
+  supervisor can now approve pending pairing requests itself.
+- Approved request ids are remembered so upgrade requests are not re-submitted
+  in a loop.
+
 ## 0.1.3
 
 - Set `HOME`, `XDG_CONFIG_HOME` and `PATH` as container environment variables.
