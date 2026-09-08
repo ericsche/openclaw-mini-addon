@@ -120,21 +120,41 @@ cmd_token() {
   jq -r '.gateway.auth.token // "(no token configured)"' "$OC_CONFIG"
 }
 
+# Browsers reaching the Control UI from anything other than loopback must be
+# paired once. OpenClaw offers no config switch to disable this ceremony.
+cmd_devices() {
+  openclaw devices list
+}
+
+cmd_approve() {
+  if [ -z "${1:-}" ]; then
+    echo "Usage: oc-maint approve <requestId>" >&2
+    echo "Run 'oc-maint devices' to list pending requests." >&2
+    return 2
+  fi
+  openclaw devices approve "$1"
+}
+
 usage() {
   cat <<'EOF'
 Usage: oc-maint <command>
 
-  status    Show gateway, port, PID and maintenance state
-  stop      Pause the supervisor and stop the gateway
-  start     Resume the supervisor and wait for the gateway
-  restart   stop + start
-  doctor    Stop the gateway, run 'openclaw doctor --fix', restart it
-  update    Stop the gateway, install openclaw@latest, repair, restart it
-  token     Print the configured gateway auth token
+  status          Show gateway, port, PID and maintenance state
+  stop            Pause the supervisor and stop the gateway
+  start           Resume the supervisor and wait for the gateway
+  restart         stop + start
+  doctor          Stop the gateway, run 'openclaw doctor --fix', restart it
+  update          Stop the gateway, install openclaw@latest, repair, restart it
+  token           Print the configured gateway auth token
+  devices         List pending and paired Control UI devices
+  approve <id>    Approve a pending device pairing request
 EOF
 }
 
-case "${1:-status}" in
+CMD="${1:-status}"
+shift || true
+
+case "$CMD" in
   status)  cmd_status ;;
   stop)    cmd_stop ;;
   start)   cmd_start ;;
@@ -142,6 +162,8 @@ case "${1:-status}" in
   doctor)  cmd_doctor ;;
   update)  cmd_update ;;
   token)   cmd_token ;;
+  devices) cmd_devices ;;
+  approve) cmd_approve "${1:-}" ;;
   -h|--help|help) usage ;;
-  *) echo "Unknown command: $1" >&2; usage >&2; exit 2 ;;
+  *) echo "Unknown command: $CMD" >&2; usage >&2; exit 2 ;;
 esac

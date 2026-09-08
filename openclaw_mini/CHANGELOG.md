@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- Set `HOME`, `XDG_CONFIG_HOME` and `PATH` as container environment variables.
+  Previously they were only exported inside `run.sh`, so a `docker exec` session
+  read `/root/.openclaw` instead of the live state and `openclaw` commands
+  targeted the wrong install.
+- Add `oc-maint devices` and `oc-maint approve <id>` for the Control UI browser
+  pairing ceremony.
+
 ## 0.1.2
 
 - Add the `allowed_origins` option. Without it the Control UI answers

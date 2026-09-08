@@ -68,6 +68,15 @@ oc-maint restart
 oc-maint doctor     # stop -> openclaw doctor --fix -> restart
 oc-maint update     # stop -> install openclaw@latest -> repair -> restart
 oc-maint token      # print the gateway auth token
+oc-maint devices    # list Control UI devices
+oc-maint approve <id>   # approve a browser pairing request
+```
+
+Get a shell with the **Advanced SSH & Web Terminal** add-on (protection mode off) or
+the host console:
+
+```bash
+docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
 ```
 
 ### Do not run these

@@ -67,6 +67,20 @@ Some OpenClaw commands require the gateway to be stopped. This add-on can actual
 that — its supervisor honours a maintenance flag instead of restarting the gateway
 behind your back.
 
+### Getting a shell
+
+This add-on ships no web terminal. Use the **Advanced SSH & Web Terminal** add-on with
+protection mode disabled, or the host console, then:
+
+```bash
+docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
+```
+
+The container sets `HOME=/config` and puts `/config/.node_global/bin` on `PATH`, so
+`openclaw` and `oc-maint` target the live state without extra environment variables.
+
+### Commands
+
 From a shell in the add-on container:
 
 | Command | Effect |
@@ -78,9 +92,25 @@ From a shell in the add-on container:
 | `oc-maint doctor` | Stop, run `openclaw doctor --fix`, restart |
 | `oc-maint update` | Stop, install `openclaw@latest`, repair, restart |
 | `oc-maint token` | Print the gateway auth token |
+| `oc-maint devices` | List pending and paired Control UI devices |
+| `oc-maint approve <id>` | Approve a pending device pairing request |
 
 `oc-maint doctor` and `oc-maint update` always resume the supervisor, even if the
 command fails or you press Ctrl+C.
+
+## Pairing your browser
+
+The first time you open the Control UI from anything other than loopback, OpenClaw
+asks for a one-time approval and shows a request ID. This is a security feature and
+cannot be disabled.
+
+```bash
+oc-maint devices                                     # find the pending request
+oc-maint approve 77e3e1c6-3c2a-4096-a1c1-fbff57f77f8c
+```
+
+Each browser profile gets its own device ID, so clearing browser data means pairing
+again.
 
 ## Commands to avoid
 
