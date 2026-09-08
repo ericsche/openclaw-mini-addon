@@ -17,6 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # iproute2 -> ss (port ownership), procps -> pgrep/kill, jq -> options parsing.
 # git/ripgrep/curl are the bare minimum most OpenClaw skills expect.
+# tmux keeps the web terminal session alive when the browser tab is closed.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -26,8 +27,16 @@ RUN apt-get update \
       iproute2 \
       procps \
       ripgrep \
+      tmux \
       tzdata \
  && rm -rf /var/lib/apt/lists/*
+
+# ttyd is not packaged for Debian, so take the upstream static binary.
+ARG TTYD_VERSION=1.7.7
+RUN curl -fsSL -o /usr/local/bin/ttyd \
+      "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64" \
+ && chmod +x /usr/local/bin/ttyd \
+ && ttyd --version
 
 # Baked-in runtime so the first boot is fast and works offline.
 # A later `oc-maint update` installs into /config/.node_global, which wins in PATH.

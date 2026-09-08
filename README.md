@@ -22,12 +22,12 @@ through a single command: `oc-maint`.
 
 | Included | Not included |
 |---|---|
-| OpenClaw gateway, supervised with backoff | Home Assistant Ingress / sidebar panel |
-| Persistent config, workspace and npm globals in `/config` | Web terminal (ttyd) — use the SSH add-on |
-| Maintenance mode (`oc-maint`) | Chromium / browser automation |
-| LAN or loopback bind, auto-generated auth token | Homebrew, proxy shim, Tailscale relay |
-| Optional update on boot | Assist pipeline / OpenAI-compatible endpoint |
-| amd64 | aarch64, armv7 |
+| OpenClaw gateway, supervised with backoff | Chromium / browser automation |
+| Web terminal (ttyd) on the HA sidebar via Ingress | Homebrew, proxy shim, Tailscale relay |
+| Maintenance mode (`oc-maint`) | Assist pipeline / OpenAI-compatible endpoint |
+| Persistent config, workspace and npm globals in `/config` | Dashboard embedded in the HA panel |
+| LAN or loopback bind, auto-generated auth token | Prebuilt image (builds on your machine) |
+| Optional update on boot, optional device auto-approval | aarch64, armv7 |
 
 If you need any of the right-hand column, use the upstream add-on instead.
 
@@ -48,7 +48,8 @@ The dashboard is at `http://<home-assistant-ip>:18789/`.
 | `gateway_bind_mode` | `lan` | `lan` to reach it from your network, `loopback` for local only |
 | `gateway_token` | *(empty)* | Auth token. Generated automatically if empty and bind is `lan` |
 | `allowed_origins` | *(empty)* | Comma-separated browser origins allowed to open the Control UI, e.g. `http://192.168.1.50:18789` |
-| `auto_approve_devices` | `false` | Approve Control UI browser pairing automatically. Needed when you have no Docker access to run `oc-maint approve` |
+| `enable_terminal` | `true` | Web terminal in the Home Assistant sidebar, through Ingress |
+| `auto_approve_devices` | `false` | Approve Control UI browser pairing automatically. Only needed if you disable the terminal |
 | `auto_update` | `false` | Install `openclaw@latest` on every start, before the gateway boots |
 
 > With `gateway_bind_mode: loopback` the mapped port is unreachable from your LAN.
@@ -73,8 +74,10 @@ oc-maint devices    # list Control UI devices
 oc-maint approve <id>   # approve a browser pairing request
 ```
 
-Get a shell with the **Advanced SSH & Web Terminal** add-on (protection mode off) or
-the host console:
+Get a shell from the **OpenClaw** entry in the Home Assistant sidebar. No SSH add-on,
+no Docker access and no exposed port are needed — Ingress handles authentication.
+
+If you prefer Docker:
 
 ```bash
 docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
@@ -91,6 +94,12 @@ docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
 
 ## Design notes
 
+- **The web terminal is supervised independently of the gateway.** It has to stay
+  reachable precisely when the gateway is broken, since that is when you need
+  `oc-maint doctor`.
+- **Boolean options are read with an explicit null test, not `//`.** jq's `//`
+  falls back on `false` as well as `null`, which silently turned `false` options
+  back into their defaults.
 - **The base image is pinned, not taken from `BUILD_FROM`.** The Supervisor passes
   `BUILD_FROM` pointing at a Home Assistant Alpine base image, which silently
   overrides any default declared in the Dockerfile and breaks the build
@@ -124,6 +133,8 @@ openclaw_mini/
 tests/
   test-supervisor.sh     boot, recovery, maintenance, shutdown
   test-failure-path.sh   fast-fail, backoff, resilience
+  test-terminal.sh       ingress terminal lifecycle and enable/disable
+  test-auto-approve.sh   Control UI pairing auto-approval
 ```
 
 ## Tests

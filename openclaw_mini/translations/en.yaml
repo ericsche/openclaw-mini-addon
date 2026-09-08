@@ -25,6 +25,12 @@ configuration:
       example http://192.168.1.50:18789. Required when you reach the dashboard
       by IP or hostname, otherwise OpenClaw answers "origin not allowed".
       Loopback and homeassistant.local are always allowed.
+  enable_terminal:
+    name: Web terminal
+    description: >-
+      Serve a terminal on the OpenClaw entry in the Home Assistant sidebar,
+      through Ingress. This is how you reach the oc-maint commands. Turning it
+      off removes the only built-in way to administer the add-on.
   auto_approve_devices:
     name: Auto-approve Control UI browsers
     description: >-

@@ -9,9 +9,11 @@ OPTIONS_FILE=/data/options.json
 
 log() { echo "[openclaw-mini] $*"; }
 
+# jq's `//` operator falls back on false as well as null, which silently turned
+# `false` booleans back into their default. Test for null explicitly instead.
 opt() {
   if [ -f "$OPTIONS_FILE" ]; then
-    jq -r "$1 // empty" "$OPTIONS_FILE" 2>/dev/null || true
+    jq -r "$1 | if . == null then empty else tostring end" "$OPTIONS_FILE" 2>/dev/null || true
   fi
 }
 
@@ -21,6 +23,7 @@ GW_PORT="$(opt '.gateway_port')";           GW_PORT="${GW_PORT:-18789}"
 GW_BIND="$(opt '.gateway_bind_mode')";      GW_BIND="${GW_BIND:-lan}"
 GW_TOKEN="$(opt '.gateway_token')"
 ALLOWED_ORIGINS="$(opt '.allowed_origins')"
+ENABLE_TERMINAL="$(opt '.enable_terminal')"; ENABLE_TERMINAL="${ENABLE_TERMINAL:-true}"
 AUTO_APPROVE="$(opt '.auto_approve_devices')"; AUTO_APPROVE="${AUTO_APPROVE:-false}"
 AUTO_UPDATE="$(opt '.auto_update')";        AUTO_UPDATE="${AUTO_UPDATE:-false}"
 
@@ -94,7 +97,33 @@ log "Operator commands: oc-maint status|stop|start|restart|doctor|update|token"
 
 # ------------------------------------------------------------- supervisor ---
 GW_WRAPPER=""
+TTYD_PID=""
 SHUTTING_DOWN=false
+
+# Home Assistant Ingress proxies to this port and handles authentication, so
+# ttyd is never published to the host. tmux keeps the session alive across
+# browser reloads, which matters for long `oc-maint update` runs.
+TTYD_PORT=8099
+
+start_terminal() {
+  if [ "$ENABLE_TERMINAL" != "true" ]; then
+    return 0
+  fi
+  if oc_listening "$TTYD_PORT"; then
+    return 0
+  fi
+  log "Starting web terminal on ingress port $TTYD_PORT"
+  ttyd --writable --port "$TTYD_PORT" \
+    tmux -u new -A -s openclaw bash -l < /dev/null > /dev/null 2>&1 &
+  TTYD_PID=$!
+}
+
+stop_terminal() {
+  if [ -n "$TTYD_PID" ]; then
+    kill "$TTYD_PID" 2>/dev/null || true
+    TTYD_PID=""
+  fi
+}
 
 # Interruptible sleep: a bare `sleep` would delay SIGTERM handling.
 nap() { sleep "$1" & wait $! 2>/dev/null || true; }
@@ -120,6 +149,7 @@ stop_gateway() {
 on_term() {
   SHUTTING_DOWN=true
   log "Shutdown requested"
+  stop_terminal
   stop_gateway
   exit 0
 }
@@ -213,6 +243,10 @@ FAIL_STREAK=0
 
 while true; do
   reap_wrapper
+
+  # The terminal is independent of the gateway: it must stay reachable exactly
+  # when the gateway is broken and you need oc-maint to repair it.
+  start_terminal
 
   # Maintenance mode: oc-maint owns the gateway, do not fight it.
   if [ -f "$OC_MAINT_FLAG" ]; then

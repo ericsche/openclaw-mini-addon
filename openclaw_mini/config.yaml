@@ -1,5 +1,5 @@
 name: OpenClaw Mini
-version: "0.1.4"
+version: "0.2.0"
 slug: openclaw_mini
 description: Minimal add-on running the OpenClaw gateway, with a real maintenance mode.
 url: https://github.com/ericsche/openclaw-mini-addon
@@ -8,6 +8,13 @@ arch:
 
 startup: services
 boot: auto
+
+# Web terminal served through Home Assistant Ingress, so it inherits HA
+# authentication and needs no exposed host port.
+ingress: true
+ingress_port: 8099
+panel_title: OpenClaw
+panel_icon: mdi:robot-outline
 
 # No s6-overlay here, so we keep Docker's default init (tini) as PID 1:
 # it reaps orphaned gateway processes and forwards SIGTERM to run.sh.
@@ -39,6 +46,7 @@ options:
   gateway_bind_mode: lan
   gateway_token: ""
   allowed_origins: ""
+  enable_terminal: true
   auto_approve_devices: false
   auto_update: false
 
@@ -48,5 +56,6 @@ schema:
   gateway_bind_mode: list(loopback|lan)
   gateway_token: password?
   allowed_origins: str?
+  enable_terminal: bool?
   auto_approve_devices: bool?
   auto_update: bool?

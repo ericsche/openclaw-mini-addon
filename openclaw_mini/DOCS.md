@@ -54,13 +54,21 @@ and `http://homeassistant.local:<port>`.
 > The add-on owns `gateway.controlUi.allowedOrigins` and rewrites it on every start.
 > Add origins here, not with `openclaw config set`, or they will be lost on restart.
 
+### `enable_terminal`
+
+Serves a web terminal on the **OpenClaw** entry in the Home Assistant sidebar, through
+Ingress. Enabled by default. This is how you reach `oc-maint`.
+
+Turning it off removes the only built-in way to administer the add-on. Do that only if
+you have Docker access, or if you also enable `auto_approve_devices`.
+
 ### `auto_approve_devices`
 
 Approves Control UI browser pairing requests automatically, so you never need a shell.
 
-**Why this exists:** Home Assistant's official *Terminal & SSH* add-on has no Docker
-access, so it cannot `docker exec` into this container. On such a setup there is no
-other way to run `oc-maint approve`, and the dashboard stays unreachable.
+**Why this exists:** it lets you pair a browser without opening a shell. It is the
+fallback when `enable_terminal` is off and you have no Docker access — for example
+with Home Assistant's official *Terminal & SSH* add-on, which cannot `docker exec`.
 
 ⚠️ **Security:** with this on, any browser that reaches the port and presents the
 gateway token is granted operator access without confirmation. Only enable it on a
@@ -84,16 +92,21 @@ behind your back.
 
 ### Getting a shell
 
-This add-on ships no web terminal. You need Docker access, which the **official
-Terminal & SSH add-on does not provide**. Use **Advanced SSH & Web Terminal** with
-protection mode disabled, or the host console, then:
+Click **OpenClaw** in the Home Assistant sidebar. The add-on serves a web terminal
+through Ingress, so it inherits Home Assistant authentication, needs no exposed port,
+and requires neither an SSH add-on nor Docker access.
+
+The session runs in `tmux`, so closing the tab does not kill a long-running command.
+Reopening the terminal reattaches to it.
+
+If you would rather use Docker:
 
 ```bash
 docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
 ```
 
-If you cannot get Docker access at all, enable the `auto_approve_devices` option so
-the add-on approves Control UI browsers on its own.
+Note that Home Assistant's official *Terminal & SSH* add-on has **no Docker access**;
+only the community *Advanced SSH & Web Terminal* with protection mode disabled does.
 
 The container sets `HOME=/config` and puts `/config/.node_global/bin` on `PATH`, so
 `openclaw` and `oc-maint` target the live state without extra environment variables.

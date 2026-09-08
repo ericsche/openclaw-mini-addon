@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0
+
+- Add a web terminal on the Home Assistant sidebar, served through Ingress with
+  `ttyd` and `tmux`. `oc-maint` is now reachable without an SSH add-on, without
+  Docker access and without an exposed port. Enabled by default via
+  `enable_terminal`.
+- Fix boolean options being impossible to turn off. jq's `//` operator falls back
+  on `false` as well as `null`, so `enable_terminal: false` was read as unset and
+  reverted to its default.
+- The terminal is supervised separately from the gateway, so it stays reachable
+  exactly when the gateway is broken.
+
 ## 0.1.4
 
 - Add the opt-in `auto_approve_devices` option. Home Assistant's official

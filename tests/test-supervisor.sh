@@ -39,7 +39,7 @@ printf '#!/usr/bin/env bash\necho "npm $*"\nexit 0\n' > "$SB/bin/npm"
 chmod +x "$SB"/bin/*
 cp "$(dirname "$0")/jq.exe" "$SB/bin/jq.exe" 2>/dev/null || true
 
-printf '{"timezone":"Europe/Paris","gateway_port":18789,"gateway_bind_mode":"lan","gateway_token":"","auto_update":false}\n' > "$SB/data/options.json"
+printf '{"timezone":"Europe/Paris","gateway_port":18789,"gateway_bind_mode":"lan","gateway_token":"","enable_terminal":false,"auto_update":false}\n' > "$SB/data/options.json"
 
 # --- sandboxed copies of the real scripts ------------------------------------
 sandbox() {
