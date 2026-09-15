@@ -14,6 +14,7 @@ OC_MAINT_FLAG=/tmp/openclaw.maintenance
 oc_export_env() {
   export HOME=/config
   export XDG_CONFIG_HOME=/config
+  export OPENCLAW_SUPERVISOR_MODE=external
   export PATH="$OC_NODE_GLOBAL/bin:$PATH"
   unset OPENCLAW_HOME OPENCLAW_STATE_DIR OPENCLAW_CONFIG_PATH OPENCLAW_WORKSPACE_DIR
 }

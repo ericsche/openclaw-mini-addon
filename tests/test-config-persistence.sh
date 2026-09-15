@@ -66,6 +66,7 @@ echo "== user edits the config by hand =="
 TMP="$(mktemp)"
 jq '.agents = {"defaults": {"model": {"primary": "anthropic/claude-opus-4-6"}}}
     | .channels = {"telegram": {"enabled": true, "botToken": "keepme"}}
+    | .tools = {"profile": "coding", "deny": ["browser"]}
     | .gateway.controlUi.allowedOrigins += ["https://manual.example.com"]
     | .gateway.controlUi.basePath = "/openclaw"' "$CFG" > "$TMP"
 mv "$TMP" "$CFG"
@@ -73,6 +74,8 @@ mv "$TMP" "$CFG"
 P2="$(boot 2)"
 check "agents preserved"           "$(jq -r '.agents.defaults.model.primary' "$CFG")" "anthropic/claude-opus-4-6"
 check "channels preserved"         "$(jq -r '.channels.telegram.botToken' "$CFG")" "keepme"
+check "custom tool profile kept"   "$(jq -r '.tools.profile' "$CFG")" "coding"
+check "custom tool deny kept"      "$(jq -r '.tools.deny == ["browser"]' "$CFG")" "true"
 check "manual origin preserved"    "$(jq -r '[.gateway.controlUi.allowedOrigins[]] | index("https://manual.example.com") != null' "$CFG")" "true"
 check "other controlUi key kept"   "$(jq -r '.gateway.controlUi.basePath' "$CFG")" "/openclaw"
 check "enforced mode still local"  "$(jq -r '.gateway.mode' "$CFG")" "local"

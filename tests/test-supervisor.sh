@@ -14,6 +14,7 @@ mkdir -p "$SB/config" "$SB/data" "$SB/bin" "$SB/lib"
 cat > "$SB/bin/openclaw" <<'EOF'
 #!/usr/bin/env bash
 if [ "${1:-}" = "gateway" ] && [ "${2:-}" = "run" ]; then
+  echo "${OPENCLAW_SUPERVISOR_MODE:-}" > "$SBROOT/gateway-supervisor-mode"
   if [ -f "$SBROOT/boom" ]; then exit 1; fi
   sleep 2                      # simulate slow startup
   echo $$ > "$SBROOT/listener"
@@ -22,7 +23,11 @@ if [ "${1:-}" = "gateway" ] && [ "${2:-}" = "run" ]; then
 fi
 case "${1:-}" in
   --version) echo "2026.9.2-test" ;;
-  doctor)    echo "stub doctor: repaired"; exit 0 ;;
+  doctor)
+    echo "${OPENCLAW_SUPERVISOR_MODE:-}" > "$SBROOT/doctor-supervisor-mode"
+    echo "stub doctor: repaired"
+    exit 0
+    ;;
 esac
 exit 0
 EOF
@@ -36,6 +41,16 @@ EOF
 
 printf '#!/usr/bin/env bash\nexit 1\n'                > "$SB/bin/pgrep"
 printf '#!/usr/bin/env bash\necho "npm $*"\nexit 0\n' > "$SB/bin/npm"
+cat > "$SB/bin/editor" <<'EOF'
+#!/usr/bin/env bash
+if [ "${EDITOR_MODE:-valid}" = "invalid" ]; then
+  echo '{' > "$1"
+  exit 0
+fi
+tmp="$(mktemp)"
+jq '.testEditor = "saved"' "$1" > "$tmp"
+mv "$tmp" "$1"
+EOF
 chmod +x "$SB"/bin/*
 cp "$(dirname "$0")/jq.exe" "$SB/bin/jq.exe" 2>/dev/null || true
 
@@ -68,8 +83,11 @@ SUP=$!
 wait_for yes 25
 check "gateway came up" "$(listening)" "yes"
 check "supervisor alive" "$(kill -0 $SUP 2>/dev/null && echo yes || echo no)" "yes"
+check "gateway knows supervision is external" "$(cat "$SB/gateway-supervisor-mode")" "external"
 check "gateway.mode written" "$(jq -r '.gateway.mode' "$SB/config/.openclaw/openclaw.json")" "local"
 check "token generated for lan bind" "$(jq -r '.gateway.auth.token | length > 0' "$SB/config/.openclaw/openclaw.json")" "true"
+check "new install uses minimal tools" "$(jq -r '.tools.profile' "$SB/config/.openclaw/openclaw.json")" "minimal"
+check "new install allows web tools" "$(jq -r '.tools.alsoAllow == ["group:web"]' "$SB/config/.openclaw/openclaw.json")" "true"
 
 echo "== crash recovery =="
 kill "$(cat "$SB/listener")" 2>/dev/null
@@ -92,8 +110,26 @@ check "resumed" "$(listening)" "yes"
 "$SB/bin/oc-maint" doctor > "$SB/doctor.log" 2>&1
 check "doctor exit code" "$?" "0"
 check "doctor ran" "$(grep -c 'stub doctor: repaired' "$SB/doctor.log")" "1"
+check "doctor defers service management" "$(cat "$SB/doctor-supervisor-mode")" "external"
 check "gateway back after doctor" "$(listening)" "yes"
 check "maintenance flag cleared" "$([ -f /tmp/openclaw.maintenance ] && echo yes || echo no)" "no"
+
+echo "== update (stop -> npm -> fix -> resume) =="
+"$SB/bin/oc-maint" update > "$SB/update.log" 2>&1
+check "update exit code" "$?" "0"
+check "npm update ran" "$(grep -c 'npm install -g openclaw@latest' "$SB/update.log")" "1"
+check "post-update doctor ran" "$(grep -c 'stub doctor: repaired' "$SB/update.log")" "1"
+check "gateway back after update" "$(listening)" "yes"
+
+echo "== config editor =="
+EDITOR="$SB/bin/editor" "$SB/bin/oc-maint" config > "$SB/config-edit.log" 2>&1
+check "config editor exit code" "$?" "0"
+check "config edit saved" "$(jq -r '.testEditor' "$SB/config/.openclaw/openclaw.json")" "saved"
+check "config edit backup created" "$([ -f "$SB/config/.openclaw/openclaw.json.edit.bak" ] && echo yes || echo no)" "yes"
+
+EDITOR="$SB/bin/editor" EDITOR_MODE=invalid "$SB/bin/oc-maint" config > "$SB/config-invalid.log" 2>&1
+check "invalid config rejected" "$?" "1"
+check "valid config restored" "$(jq -r '.testEditor' "$SB/config/.openclaw/openclaw.json")" "saved"
 
 echo "== status =="
 "$SB/bin/oc-maint" status > "$SB/status.log" 2>&1

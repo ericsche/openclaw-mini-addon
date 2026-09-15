@@ -52,6 +52,11 @@ The dashboard is at `http://<home-assistant-ip>:18789/`.
 | `auto_approve_devices` | `false` | Approve Control UI browser pairing automatically. Only needed if you disable the terminal |
 | `auto_update` | `false` | Install `openclaw@latest` on every start, before the gateway boots |
 
+On a new installation, the generated OpenClaw configuration uses
+`tools.profile: minimal` with `group:web` added. This keeps tool schemas small
+for local models while retaining web search and fetch. Once created, the add-on
+does not modify the `tools` configuration.
+
 > With `gateway_bind_mode: loopback` the mapped port is unreachable from your LAN.
 > That mode is only useful if you connect from inside the container.
 
@@ -70,12 +75,15 @@ oc-maint restart
 oc-maint doctor     # stop -> openclaw doctor --fix -> restart
 oc-maint update     # stop -> install openclaw@latest -> repair -> restart
 oc-maint token      # print the gateway auth token
+oc-maint config     # edit openclaw.json with validation and automatic backup
 oc-maint devices    # list Control UI devices
 oc-maint approve <id>   # approve a browser pairing request
 ```
 
 Get a shell from the **OpenClaw** entry in the Home Assistant sidebar. No SSH add-on,
 no Docker access and no exposed port are needed — Ingress handles authentication.
+`oc-maint config` opens the live configuration in `nano`. Invalid JSON is rejected
+and the previous version is restored from `openclaw.json.edit.bak`.
 
 If you prefer Docker:
 
@@ -87,7 +95,14 @@ docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
 
 - `openclaw update` — drives service management and a post-update doctor that
   cannot work in a container. Use `oc-maint update`.
+- The Control UI update button cannot perform a managed-service handoff in this
+  container. If it reports `managed-service-handoff unavailable` or
+  `external-supervisor-update-required`, open the add-on terminal and run
+  `oc-maint update`.
 - `openclaw gateway stop` / `restart` — there is no systemd here. Use `oc-maint`.
+- The container declares `OPENCLAW_SUPERVISOR_MODE=external`, so current OpenClaw
+  releases deliberately defer gateway lifecycle and Doctor service repairs to
+  `oc-maint` and the add-on supervisor.
 - `export OPENCLAW_STATE_DIR=...` / `OPENCLAW_CONFIG_PATH=...` / `OPENCLAW_HOME=...` —
   OpenClaw then treats the state tree as *isolated* and disables doctor repairs and
   service management. `HOME=/config` is already set for you; that is all it needs.
@@ -117,6 +132,8 @@ docker exec -it $(docker ps --format '{{.Names}}' | grep openclaw_mini) bash
   `gateway.mode`, `port` and `bind`, writes `auth.token` only when one is missing,
   and **unions** `controlUi.allowedOrigins` so manual entries survive. Agents,
   channels, models and credentials are never touched.
+- **New configurations start with a small tool set**: profile `minimal` plus
+  `group:web`. Existing `tools` settings are user-owned and never changed.
 - **The file is left alone when nothing changes.** The gateway watches it and hot
   reloads, so a pointless rewrite on every boot would be a real cost. When a write
   does happen, the previous version is kept as `openclaw.json.addon.bak`.

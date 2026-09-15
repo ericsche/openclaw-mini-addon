@@ -13,7 +13,7 @@ Requires `bash`, `jq`, `sed`, `grep` and `seq`. Each script exits non-zero on fa
 
 | Script | Covers |
 |---|---|
-| `test-supervisor.sh` | Boot, config merge, token generation, crash recovery, `oc-maint stop/start/doctor/status`, SIGTERM shutdown |
+| `test-supervisor.sh` | Boot, config merge, token generation, crash recovery, `oc-maint stop/start/doctor/update/config/status`, SIGTERM shutdown |
 | `test-failure-path.sh` | Gateway refusing to start: fast-fail on non-zero exit, backoff, no `set -e` death, recovery, loopback bind writing no token |
 | `test-terminal.sh` | Ingress terminal start, crash recovery, staying up while the gateway is down, shutdown, and `enable_terminal: false` |
 | `test-auto-approve.sh` | Control UI pairing: approving pending requests, ignoring approved ones, no duplicate approvals |

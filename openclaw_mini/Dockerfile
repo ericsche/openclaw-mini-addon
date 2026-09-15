@@ -7,7 +7,7 @@ FROM node:24-bookworm-slim
 # Supplied by the Supervisor from config.yaml. Locally built add-ons must carry
 # the io.hass.* labels themselves; the Home Assistant builder action would
 # otherwise inject them.
-ARG BUILD_VERSION=0.1.3
+ARG BUILD_VERSION=0.2.2
 ARG BUILD_ARCH=amd64
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -25,6 +25,7 @@ RUN apt-get update \
       git \
       jq \
       iproute2 \
+      nano \
       procps \
       ripgrep \
       tmux \
@@ -56,6 +57,7 @@ RUN chmod +x /usr/local/bin/run.sh /usr/local/bin/oc-maint
 # `openclaw devices approve` would read /root/.openclaw and miss the live state.
 ENV HOME=/config \
     XDG_CONFIG_HOME=/config \
+    OPENCLAW_SUPERVISOR_MODE=external \
     PATH=/config/.node_global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 WORKDIR /config

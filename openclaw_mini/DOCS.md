@@ -125,11 +125,16 @@ From a shell in the add-on container:
 | `oc-maint doctor` | Stop, run `openclaw doctor --fix`, restart |
 | `oc-maint update` | Stop, install `openclaw@latest`, repair, restart |
 | `oc-maint token` | Print the gateway auth token |
+| `oc-maint config` | Edit `openclaw.json`, validate JSON, keep a backup |
 | `oc-maint devices` | List pending and paired Control UI devices |
 | `oc-maint approve <id>` | Approve a pending device pairing request |
 
 `oc-maint doctor` and `oc-maint update` always resume the supervisor, even if the
 command fails or you press Ctrl+C.
+
+`oc-maint config` opens the live file in `nano`. Before editing it writes
+`openclaw.json.edit.bak`; if the result is not valid JSON, the backup is restored
+automatically.
 
 ## Pairing your browser
 
@@ -149,8 +154,14 @@ again.
 
 - `openclaw update` — it drives service management and a post-update doctor that
   cannot succeed in a container. It ends in `triage`. Use `oc-maint update`.
+- The Control UI update button cannot hand off to a managed system service in
+  this container. If it reports `managed-service-handoff unavailable` or
+  `external-supervisor-update-required`, use `oc-maint update` from the add-on
+  terminal.
 - `openclaw gateway stop` / `openclaw gateway restart` — there is no systemd in this
   container, so OpenClaw's service commands do not apply. Use `oc-maint`.
+- The container sets `OPENCLAW_SUPERVISOR_MODE=external`, so OpenClaw defers gateway
+  lifecycle and Doctor service repairs to `oc-maint` and the add-on supervisor.
 - Exporting `OPENCLAW_STATE_DIR`, `OPENCLAW_CONFIG_PATH` or `OPENCLAW_HOME` — OpenClaw
   then treats the state tree as isolated and silently disables doctor repairs.
   `HOME=/config` is set for you and is all that is needed.
@@ -182,6 +193,21 @@ credentials and sessions are left completely alone.
 Everything else, including other `gateway.controlUi` keys such as `basePath`, is
 preserved untouched.
 
+When the file is created for the first time, it also receives:
+
+```json
+{
+  "tools": {
+    "profile": "minimal",
+    "alsoAllow": ["group:web"]
+  }
+}
+```
+
+This reduces tool-schema context usage for local models while retaining web
+tools. After the initial creation, `tools` is user-owned and never modified by
+the add-on.
+
 The file is only rewritten when the result actually differs. When it is, the previous
 version is kept as `openclaw.json.addon.bak`. On an unchanged boot the add-on logs
 `Config already correct; left untouched` and does not touch the file at all, so the
@@ -195,6 +221,11 @@ gateway properly first, which is exactly what `doctor` needs.
 
 **"Maintenance : ON" in `oc-maint status`.**
 A previous `oc-maint stop` was never resumed. Run `oc-maint start`.
+
+**"managed-service-handoff unavailable" when updating from the Control UI.**
+The gateway cannot replace its own runtime without a native managed service.
+Open the add-on terminal and run `oc-maint update`; it stops the gateway before
+updating and resumes it afterwards.
 
 **Cannot reach the dashboard from another machine.**
 Check that `gateway_bind_mode` is `lan`, not `loopback`, then restart the add-on.

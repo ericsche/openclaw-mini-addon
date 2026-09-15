@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.2
+
+- Declare `OPENCLAW_SUPERVISOR_MODE=external` so current OpenClaw releases defer
+  gateway lifecycle and Doctor service repairs to the add-on supervisor instead
+  of attempting native service management and failing on the persistent
+  `/config` home.
+- Document that Control UI self-updates cannot use OpenClaw's managed-service
+  handoff in this container and must be performed with `oc-maint update`.
+- Initialize new OpenClaw configurations with the `minimal` tool profile plus
+  `group:web`, reducing tool-schema context use for local models. Existing
+  `tools` settings remain untouched.
+- Add `oc-maint config`, a `nano` editor for the live configuration with an
+  automatic backup and JSON validation/rollback.
+
 ## 0.2.1
 
 - Stop replacing `gateway.controlUi.allowedOrigins` on every start. Origins added

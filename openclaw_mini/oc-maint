@@ -120,6 +120,34 @@ cmd_token() {
   jq -r '.gateway.auth.token // "(no token configured)"' "$OC_CONFIG"
 }
 
+cmd_config() {
+  if [ ! -f "$OC_CONFIG" ]; then
+    echo "ERROR: config file not found: $OC_CONFIG" >&2
+    return 1
+  fi
+
+  local editor="${VISUAL:-${EDITOR:-nano}}"
+  local backup="$OC_CONFIG.edit.bak"
+  local rc=0
+
+  cp "$OC_CONFIG" "$backup"
+  "$editor" "$OC_CONFIG" || rc=$?
+
+  if ! jq empty "$OC_CONFIG" >/dev/null 2>&1; then
+    cp "$backup" "$OC_CONFIG"
+    echo "ERROR: invalid JSON; restored $backup" >&2
+    return 1
+  fi
+
+  if [ "$rc" -ne 0 ]; then
+    echo "ERROR: editor exited with code $rc; config remains valid." >&2
+    return "$rc"
+  fi
+
+  echo "Config saved: $OC_CONFIG"
+  echo "Previous version: $backup"
+}
+
 # Browsers reaching the Control UI from anything other than loopback must be
 # paired once. OpenClaw offers no config switch to disable this ceremony.
 cmd_devices() {
@@ -146,6 +174,7 @@ Usage: oc-maint <command>
   doctor          Stop the gateway, run 'openclaw doctor --fix', restart it
   update          Stop the gateway, install openclaw@latest, repair, restart it
   token           Print the configured gateway auth token
+  config          Edit openclaw.json, validate it, and keep a backup
   devices         List pending and paired Control UI devices
   approve <id>    Approve a pending device pairing request
 EOF
@@ -162,6 +191,7 @@ case "$CMD" in
   doctor)  cmd_doctor ;;
   update)  cmd_update ;;
   token)   cmd_token ;;
+  config)  cmd_config ;;
   devices) cmd_devices ;;
   approve) cmd_approve "${1:-}" ;;
   -h|--help|help) usage ;;

@@ -50,7 +50,14 @@ fi
 # ----------------------------------------------------------------- config ---
 if [ ! -f "$OC_CONFIG" ]; then
   log "Bootstrapping $OC_CONFIG"
-  echo '{}' > "$OC_CONFIG"
+  cat > "$OC_CONFIG" <<'EOF'
+{
+  "tools": {
+    "profile": "minimal",
+    "alsoAllow": ["group:web"]
+  }
+}
+EOF
 fi
 
 EXISTING_TOKEN="$(jq -r '.gateway.auth.token // empty' "$OC_CONFIG" 2>/dev/null || true)"
